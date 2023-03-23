@@ -2,23 +2,24 @@
 
 # This script reads key-value pairs from a file and creates a Jenkins credential
 
-# Replace the following variables with your Jenkins configuration
-JENKINS_URL="http://localhost:8080"
-CREDENTIAL_ID="your_credential_id"
+# Replace the following variables with your secrets file location.
+SECRETS_FILE_PATH="./secrets.txt"
 
-# Check if the API token and username were passed as command-line arguments
-if [ $# -ne 2 ]; then
-  echo "Usage: $0 <USER_NAME> <API_TOKEN>"
+# Check if the API token, username, Jenkins URL, and credential ID were passed as command-line arguments
+if [ $# -ne 4 ]; then
+  echo "Usage: $0 <USER_NAME> <API_TOKEN> <JENKINS_URL> <CREDENTIAL_ID>"
   exit 1
 fi
 
 # Assign the command-line arguments to variables
 USER_NAME="$1"
 API_TOKEN="$2"
+JENKINS_URL="$3"
+CREDENTIAL_ID="$4"
 
 # Check if the file containing key-value pairs exists and is readable
-if [ ! -r "secrets.txt" ]; then
-  echo "File 'secrets.txt' not found or not readable."
+if [ ! -r "$SECRETS_FILE_PATH" ]; then
+  echo "File '$SECRETS_FILE_PATH' not found or not readable."
   exit 1
 fi
 
@@ -26,17 +27,6 @@ fi
 while read line; do
   key=$(echo $line | cut -d'=' -f1)
   value=$(echo $line | cut -d'=' -f2)  
-  
-# Check if a credential with the same ID already exists
-  existing_credential=$(curl -s -o /dev/null -w "%{http_code}" -X GET -u "${USER_NAME}:${API_TOKEN}" "${JENKINS_URL}/credentials/store/system/domain/_/credential/${CREDENTIAL_ID}_${key}/api/json")
-  if [ ${existing_credential} -eq 200 ]; then
-    echo "Credential '${key}' already exists. Skipping."
-    continue
-  elif [ ${existing_credential} -ne 404 ]; then
-    echo "Failed to check if credential '${key}' already exists."
-    exit 1
-  fi
-
 
   # Construct the JSON payload for the credential
   payload="{
@@ -63,4 +53,4 @@ while read line; do
   else
     echo "Failed to create credential '${key}'."
   fi
-done < secrets.txt
+done < $SECRETS_FILE_PATH
